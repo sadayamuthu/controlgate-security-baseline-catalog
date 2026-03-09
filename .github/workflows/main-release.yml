@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: write
-  administration: write
 
 concurrency:
   group: main-release
@@ -135,6 +134,7 @@ jobs:
 
       - name: Update repository metadata
         if: steps.commit.outputs.pushed == 'true'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
