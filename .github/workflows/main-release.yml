@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: main-release
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -50,12 +54,42 @@ jobs:
 
       - name: Commit and push baseline
         id: commit
+        shell: bash
         run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y-%m-%d)
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add baseline/
+
+          # Bootstrap baseline-artifacts branch if it doesn't exist yet
+          if ! git ls-remote --exit-code --heads origin baseline-artifacts; then
+            (
+              trap 'git checkout main 2>/dev/null || true' EXIT
+              git checkout --orphan baseline-artifacts
+              git rm -rf . >/dev/null 2>/dev/null || true
+              git commit --allow-empty -m "chore: initialize baseline-artifacts branch"
+              git push origin baseline-artifacts
+            )
+          fi
+
+          # Clean up any stale worktree before adding
+          git worktree remove --force /tmp/artifacts 2>/dev/null || true
+          rm -rf /tmp/artifacts
+
+          # Check out baseline-artifacts into a worktree
+          git fetch origin baseline-artifacts
+          git worktree add /tmp/artifacts origin/baseline-artifacts  # detached HEAD is intentional
+
+          # Copy generated baseline files
+          cp baseline/cgsbc_full_catalog_enriched.json /tmp/artifacts/
+
+          # Commit and force-push if anything changed
+          cd /tmp/artifacts
+          git add .
           if ! git diff --cached --quiet; then
             git commit -m "baseline: update enriched catalog $(date -u +%Y-%m-%d)"
+            git pull --rebase -X theirs origin main
             git push
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           else
@@ -129,6 +163,7 @@ jobs:
 
       - name: Update repository metadata
         if: steps.commit.outputs.pushed == 'true'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
