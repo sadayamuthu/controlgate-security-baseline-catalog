@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  administration: write
 
 concurrency:
   group: main-release
