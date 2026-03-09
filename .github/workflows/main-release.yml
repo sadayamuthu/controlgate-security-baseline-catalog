@@ -9,6 +9,11 @@ on:
 
 permissions:
   contents: write
+  administration: write
+
+concurrency:
+  group: main-release
+  cancel-in-progress: false
 
 concurrency:
   group: main-release
@@ -88,8 +93,9 @@ jobs:
           cd /tmp/artifacts
           git add .
           if ! git diff --cached --quiet; then
-            git commit -m "baseline: update enriched catalog $DATE"
-            git push origin HEAD:baseline-artifacts --force
+            git commit -m "baseline: update enriched catalog $(date -u +%Y-%m-%d)"
+            git pull --rebase -X theirs origin main
+            git push
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           else
             echo "No changes to commit."
