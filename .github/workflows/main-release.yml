@@ -67,7 +67,7 @@ jobs:
             (
               trap 'git checkout main 2>/dev/null || true' EXIT
               git checkout --orphan baseline-artifacts
-              git rm -rf . >/dev/null || true
+              git rm -rf . >/dev/null 2>/dev/null || true
               git commit --allow-empty -m "chore: initialize baseline-artifacts branch"
               git push origin baseline-artifacts
             )
@@ -79,7 +79,7 @@ jobs:
 
           # Check out baseline-artifacts into a worktree
           git fetch origin baseline-artifacts
-          git worktree add /tmp/artifacts origin/baseline-artifacts
+          git worktree add /tmp/artifacts origin/baseline-artifacts  # detached HEAD is intentional
 
           # Copy generated baseline files
           cp baseline/cgsbc_full_catalog_enriched.json /tmp/artifacts/
