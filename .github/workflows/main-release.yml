@@ -57,11 +57,29 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add baseline/
+
+          # Bootstrap baseline-artifacts branch if it doesn't exist yet
+          if ! git ls-remote --exit-code --heads origin baseline-artifacts; then
+            git checkout --orphan baseline-artifacts
+            git rm -rf . > /dev/null 2>&1 || true
+            git commit --allow-empty -m "chore: initialize baseline-artifacts branch"
+            git push origin baseline-artifacts
+            git checkout main
+          fi
+
+          # Check out baseline-artifacts into a worktree
+          git fetch origin baseline-artifacts
+          git worktree add /tmp/artifacts origin/baseline-artifacts
+
+          # Copy generated baseline files
+          cp -r baseline/. /tmp/artifacts/
+
+          # Commit and force-push if anything changed
+          cd /tmp/artifacts
+          git add .
           if ! git diff --cached --quiet; then
             git commit -m "baseline: update enriched catalog $(date -u +%Y-%m-%d)"
-            git pull --rebase -X theirs origin main
-            git push
+            git push origin HEAD:baseline-artifacts --force
             echo "pushed=true" >> "$GITHUB_OUTPUT"
           else
             echo "No changes to commit."
