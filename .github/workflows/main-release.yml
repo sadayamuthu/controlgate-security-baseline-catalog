@@ -19,6 +19,10 @@ concurrency:
   group: main-release
   cancel-in-progress: false
 
+concurrency:
+  group: main-release
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest
